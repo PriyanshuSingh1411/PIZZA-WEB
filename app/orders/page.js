@@ -47,26 +47,65 @@ function OrderCard({ order }) {
   /* DOWNLOAD INVOICE */
   const downloadInvoice = () => {
     const doc = new jsPDF();
-    doc.setFontSize(20);
-    doc.text("Pizza Shop Invoice", 105, 20, { align: "center" });
+
+    /* HEADER */
+    doc.setFontSize(22);
+    doc.setFont("helvetica", "bold");
+    doc.text("Pizza Shop", 105, 20, { align: "center" });
+
     doc.setFontSize(12);
-    doc.text(`Order ID: ${order.id}`, 20, 40);
-    doc.text(`Status: ${order.status}`, 20, 48);
+    doc.setFont("helvetica", "normal");
+    doc.text("INVOICE", 105, 28, { align: "center" });
+    doc.line(20, 34, 190, 34);
+
+    /* ORDER INFO */
+    doc.setFontSize(11);
+    doc.text(`Order ID: #${order.id}`, 20, 44);
+    doc.text(`Status: ${order.status}`, 20, 52);
     doc.text(
       `Date: ${new Date(order.created_at || Date.now()).toLocaleString()}`,
       20,
-      56
+      60,
     );
-    doc.text("Items:", 20, 70);
 
-    let y = 80;
+    /* TABLE HEADER */
+    let y = 78;
+    doc.setFont("helvetica", "bold");
+    doc.setFillColor(240, 240, 240);
+    doc.rect(20, y - 6, 170, 10, "F");
+
+    doc.text("Item", 22, y);
+    doc.text("Qty", 120, y);
+    doc.text("Price", 150, y);
+
+    doc.setFont("helvetica", "normal");
+    y += 10;
+
+    /* ITEMS */
     order.items?.forEach((item, i) => {
-      doc.text(`${i + 1}. ${item.name} × ${item.quantity}`, 20, y);
+      doc.text(`${i + 1}. ${item.name}`, 22, y);
+      doc.text(String(item.quantity), 122, y);
+      doc.text(`Rs. ${item.price * item.quantity}`, 150, y);
       y += 8;
     });
 
+    /* TOTAL */
+    y += 8;
+    doc.line(20, y, 190, y);
+    y += 10;
+
+    doc.setFont("helvetica", "bold");
     doc.setFontSize(14);
-    doc.text(`Total Amount: ₹${order.total}`, 20, y + 10);
+    doc.text("Total Amount:", 120, y);
+    doc.text(`Rs. ${order.total}`, 150, y);
+
+    /* FOOTER */
+    doc.setFontSize(10);
+    doc.setFont("helvetica", "normal");
+    doc.text("Thank you for ordering with Pizza Shop!", 105, 285, {
+      align: "center",
+    });
+
     doc.save(`invoice-order-${order.id}.pdf`);
   };
 
@@ -74,18 +113,22 @@ function OrderCard({ order }) {
   const cancelOrder = async () => {
     if (!confirm("Are you sure you want to cancel this order?")) return;
 
-    const res = await fetch(`/api/orders/cancel/${order.id}`, {
+    const res = await fetch(`/api/orders/${order.id}/cancel`, {
       method: "PUT",
       credentials: "include",
     });
 
-    if (res.ok) {
-      alert("Order cancelled successfully");
-      window.location.reload();
-    } else {
-      const data = await res.json();
-      alert(data.message || "Unable to cancel order");
+    let data = null;
+    try {
+      data = await res.json();
+    } catch {}
+
+    if (!res.ok) {
+      alert(data?.message || "Unable to cancel order");
+      return;
     }
+
+    alert("Order cancelled successfully");
   };
 
   return (
@@ -94,7 +137,7 @@ function OrderCard({ order }) {
       <div>
         <div style={cardHeader}>
           <div>
-            <h3 style={orderId}>Order #{order.id}</h3>
+            {/* <h3 style={orderId}>Order #{order.id}</h3> */}
             <p style={amount}>Total: ₹{order.total}</p>
           </div>
           <span style={statusBadge(order.status)}>{order.status}</span>
@@ -129,8 +172,8 @@ function OrderCard({ order }) {
                       background: completed
                         ? "#16a34a"
                         : active
-                        ? "#2563eb"
-                        : "#e5e7eb",
+                          ? "#2563eb"
+                          : "#e5e7eb",
                     }}
                   >
                     {completed ? "✓" : step.icon}
@@ -248,18 +291,18 @@ const statusBadge = (status) => ({
     status === "Delivered"
       ? "#dcfce7"
       : status === "Out for Delivery"
-      ? "#e0f2fe"
-      : status === "Preparing"
-      ? "#fef9c3"
-      : "#fee2e2",
+        ? "#e0f2fe"
+        : status === "Preparing"
+          ? "#fef9c3"
+          : "#fee2e2",
   color:
     status === "Delivered"
       ? "#166534"
       : status === "Out for Delivery"
-      ? "#075985"
-      : status === "Preparing"
-      ? "#854d0e"
-      : "#7f1d1d",
+        ? "#075985"
+        : status === "Preparing"
+          ? "#854d0e"
+          : "#7f1d1d",
 });
 
 /* PRODUCTS */

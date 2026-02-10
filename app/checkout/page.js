@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+// import Script from "next/script";
 import axios from "axios";
 
 export default function CheckoutPage() {
@@ -64,6 +65,86 @@ export default function CheckoutPage() {
     setDiscount(0);
     setCouponCode("");
   };
+  const handleRazorpayPayment = async () => {
+    if (cart.length === 0) {
+      alert("Cart is empty");
+      return;
+    }
+
+    try {
+      const res = await axios.post("/api/razorpay/create-order", {
+        amount: total,
+      });
+
+      const order = res.data;
+
+      const options = {
+        key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
+        amount: order.amount,
+        currency: "INR",
+        name: "Food App",
+        description: "Order Payment",
+        order_id: order.id,
+
+        handler: async function (response) {
+          try {
+            const verifyRes = await axios.post("/api/razorpay/verify", {
+              razorpay_order_id: response.razorpay_order_id,
+              razorpay_payment_id: response.razorpay_payment_id,
+              razorpay_signature: response.razorpay_signature,
+            });
+
+            if (!verifyRes.data.success) {
+              alert("Payment verification failed ❌");
+              return;
+            }
+
+            await axios.post("/api/orders", {
+              cart,
+              subtotal,
+              discount,
+              total,
+              coupon: appliedCoupon,
+              payment_method: "ONLINE",
+              razorpay_order_id: response.razorpay_order_id,
+              razorpay_payment_id: response.razorpay_payment_id,
+            });
+
+            localStorage.removeItem("cart");
+            router.push("/order-success");
+          } catch (error) {
+            console.error("Order save failed:", error);
+            alert("Payment succeeded but order failed to save.");
+          }
+        },
+
+        modal: {
+          ondismiss: function () {
+            alert("Payment cancelled by user ❌");
+          },
+        },
+
+        theme: { color: "#ff6b00" },
+      };
+
+      if (!window.Razorpay) {
+        alert("Razorpay SDK not loaded. Please refresh.");
+        return;
+      }
+
+      const rzp = new window.Razorpay(options);
+
+      rzp.on("payment.failed", function (response) {
+        console.error("Payment Failed:", response.error);
+        alert("Payment Failed ❌\nReason: " + response.error.description);
+      });
+
+      rzp.open(); // ✅ YOU WERE MISSING THIS
+    } catch (err) {
+      console.error("Razorpay error:", err);
+      alert("Something went wrong while starting payment.");
+    }
+  };
 
   /* ======================
      PLACE ORDER
@@ -74,19 +155,15 @@ export default function CheckoutPage() {
       return;
     }
 
-    // 👉 ONLINE PAYMENT
+    // 👉 ONLINE PAYMENT (RAZORPAY)
     if (paymentMethod === "ONLINE") {
-      const res = await axios.post("/api/stripe/checkout", {
-        items: cart,
-      });
-
-      window.location.href = res.data.url; // Redirect to Stripe
+      handleRazorpayPayment();
       return;
     }
 
     // 👉 CASH ON DELIVERY
     try {
-      const res = await axios.post("/api/orders", {
+      await axios.post("/api/orders", {
         cart,
         subtotal,
         discount,

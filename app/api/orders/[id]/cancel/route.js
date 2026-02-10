@@ -17,7 +17,7 @@ export async function PUT(req, context) {
 
     const [rows] = await db.query(
       "SELECT status FROM orders WHERE id = ? AND user_id = ?",
-      [orderId, userId]
+      [orderId, userId],
     );
 
     if (!rows.length) {
@@ -27,13 +27,13 @@ export async function PUT(req, context) {
     if (["Delivered", "Out for Delivery"].includes(rows[0].status)) {
       return NextResponse.json(
         { message: "Order cannot be cancelled now" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
     await db.query(
       "UPDATE orders SET status = 'Cancelled' WHERE id = ? AND user_id = ?",
-      [orderId, userId]
+      [orderId, userId],
     );
 
     return NextResponse.json({ success: true });
