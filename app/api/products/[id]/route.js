@@ -10,7 +10,7 @@ export async function GET(req, { params }) {
   if (!rows.length) {
     return NextResponse.json(
       { success: false, error: "Product not found" },
-      { status: 404 }
+      { status: 404 },
     );
   }
 
@@ -29,7 +29,7 @@ export async function PUT(req, { params }) {
 
   await db.query(
     "UPDATE products SET name=?, description=?, price=?, category=?, image=? WHERE id=?",
-    [name, description, price, category, image, id]
+    [name, description, price, category, image, id],
   );
 
   return NextResponse.json({ success: true });

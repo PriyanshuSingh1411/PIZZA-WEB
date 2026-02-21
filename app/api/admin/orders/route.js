@@ -1,13 +1,15 @@
 import { NextResponse } from "next/server";
 import db from "@/lib/db";
 import jwt from "jsonwebtoken";
+import { cookies } from "next/headers";
 
 /* ===============================
    GET ALL ORDERS (ADMIN)
 ================================ */
 export async function GET(req) {
   try {
-    const token = req.cookies.get("token")?.value;
+    const cookieStore = await cookies();
+    const token = cookieStore.get("token")?.value;
     if (!token) {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
     }
@@ -18,7 +20,7 @@ export async function GET(req) {
     }
 
     const [orders] = await db.query(
-      "SELECT * FROM orders ORDER BY created_at DESC"
+      "SELECT * FROM orders ORDER BY created_at DESC",
     );
 
     return NextResponse.json(orders);
@@ -33,7 +35,8 @@ export async function GET(req) {
 ================================ */
 export async function PUT(req) {
   try {
-    const token = req.cookies.get("token")?.value;
+    const cookieStore = await cookies();
+    const token = cookieStore.get("token")?.value;
     if (!token) {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
     }
@@ -50,6 +53,7 @@ export async function PUT(req) {
       "Preparing",
       "Out for Delivery",
       "Delivered",
+      "Cancelled",
     ];
 
     if (!allowedStatuses.includes(status)) {

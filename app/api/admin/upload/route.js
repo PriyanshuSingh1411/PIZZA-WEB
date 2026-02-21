@@ -2,10 +2,12 @@ import { NextResponse } from "next/server";
 import jwt from "jsonwebtoken";
 import path from "path";
 import fs from "fs";
+import { cookies } from "next/headers";
 
 export async function POST(req) {
   try {
-    const token = req.cookies.get("token")?.value;
+    const cookieStore = await cookies();
+    const token = cookieStore.get("token")?.value;
     if (!token) {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
     }

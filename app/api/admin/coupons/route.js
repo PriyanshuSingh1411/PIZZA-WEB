@@ -2,16 +2,18 @@ import db from "@/lib/db";
 
 import jwt from "jsonwebtoken";
 import { NextResponse } from "next/server";
+import { cookies } from "next/headers";
 
-function isAdmin(req) {
-  const token = req.cookies.get("token")?.value;
+async function isAdmin() {
+  const cookieStore = await cookies();
+  const token = cookieStore.get("token")?.value;
   if (!token) return false;
   const user = jwt.verify(token, process.env.JWT_SECRET);
   return user.role === "admin";
 }
 
 export async function GET(req) {
-  if (!isAdmin(req)) {
+  if (!(await isAdmin())) {
     return NextResponse.json([], { status: 403 });
   }
 
@@ -20,23 +22,30 @@ export async function GET(req) {
 }
 
 export async function POST(req) {
-  if (!isAdmin(req)) {
+  if (!(await isAdmin())) {
     return NextResponse.json({}, { status: 403 });
   }
 
   const { code, type, value, min_order, expiry } = await req.json();
 
+  // Set default status to 'active' when creating new coupon
   await db.query(
-    `INSERT INTO coupons (code, type, value, min_order, expiry)
-     VALUES (?, ?, ?, ?, ?)`,
-    [code, type, value, min_order || 0, expiry || null]
+    `INSERT INTO coupons (code, type, value, min_order, expiry, status)
+     VALUES (?, ?, ?, ?, ?, 'active')`,
+    [
+      code.toUpperCase(),
+      type,
+      Number(value),
+      Number(min_order) || 0,
+      expiry || null,
+    ],
   );
 
   return NextResponse.json({ message: "Coupon added" });
 }
 
 export async function PUT(req) {
-  if (!isAdmin(req)) {
+  if (!(await isAdmin())) {
     return NextResponse.json({}, { status: 403 });
   }
 
@@ -48,7 +57,7 @@ export async function PUT(req) {
 }
 
 export async function DELETE(req) {
-  if (!isAdmin(req)) {
+  if (!(await isAdmin())) {
     return NextResponse.json({}, { status: 403 });
   }
 

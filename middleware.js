@@ -1,20 +1,23 @@
 import { NextResponse } from "next/server";
-import { jwtVerify } from "jose";
 
-export const middleware = async (req) => {
+export function middleware(req) {
   const token = req.cookies.get("token")?.value;
-  // const secret = new TextEncoder().encode(process.env.JWT_SECRET);
-  // const { user } = await jwtVerify(token, secret);
   const { pathname } = req.nextUrl;
 
-  const protectedRoutes = ["/menu", "/cart", "/checkout", "/orders", "/admin"];
+  // Always allow login pages
+  if (pathname.startsWith("/auth/login")) {
+    return NextResponse.next();
+  }
 
-  if (protectedRoutes.some((p) => pathname.startsWith(p)) && !token) {
+  // Protected routes
+  const protectedRoutes = ["/menu", "/cart", "/checkout", "/orders"];
+
+  if (protectedRoutes.some((route) => pathname.startsWith(route)) && !token) {
     return NextResponse.redirect(new URL("/auth/login", req.url));
   }
 
   return NextResponse.next();
-};
+}
 
 export const config = {
   matcher: [
@@ -22,6 +25,6 @@ export const config = {
     "/cart/:path*",
     "/checkout/:path*",
     "/orders/:path*",
-    "/admin/:path*",
+    "/auth/login",
   ],
 };

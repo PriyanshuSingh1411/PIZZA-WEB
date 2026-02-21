@@ -99,7 +99,7 @@ export default function RegisterPage() {
 const styles = {
   page: {
     minHeight: "100vh",
-    background: "linear-gradient(135deg, #ff7a18, #ff3d00)",
+    background: "url('/pizza-reg-bg.jpg')",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",

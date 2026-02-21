@@ -2,12 +2,18 @@
 
 import { usePathname } from "next/navigation";
 import Navbar from "./components/Navbar";
+import Chatbot from "./components/Chatbot";
 import "./globals.css";
 import Script from "next/script";
 
 export default function RootLayout({ children }) {
   const pathname = usePathname();
-  const isAdmin = pathname.startsWith("/admin");
+
+  const hideNavbar =
+    pathname === "/" ||
+    pathname.startsWith("/admin") ||
+    pathname.startsWith("/auth/login") ||
+    pathname.startsWith("/auth/register");
 
   return (
     <html lang="en">
@@ -17,8 +23,9 @@ export default function RootLayout({ children }) {
           strategy="beforeInteractive"
         />
 
-        {!isAdmin && <Navbar />}
+        {!hideNavbar && <Navbar />}
         {children}
+        <Chatbot />
       </body>
     </html>
   );

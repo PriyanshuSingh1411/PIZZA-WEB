@@ -1,7 +1,6 @@
-import db from "@/lib/db";
-
-import bcrypt from "bcryptjs";
 import { NextResponse } from "next/server";
+import db from "@/lib/db";
+import bcrypt from "bcryptjs";
 
 export async function POST(req) {
   try {
@@ -14,33 +13,27 @@ export async function POST(req) {
       );
     }
 
-    // Check if user exists
     const [existing] = await db.query("SELECT id FROM users WHERE email = ?", [
       email,
     ]);
 
-    if (existing.length > 0) {
+    if (existing.length) {
       return NextResponse.json(
-        { message: "User already exists" },
-        { status: 409 },
+        { message: "Email already exists" },
+        { status: 400 },
       );
     }
 
-    // Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // Insert user with default role 'user'
     await db.query(
-      "INSERT INTO users (name, email, password, role) VALUES (?, ?, ?, 'user')",
-      [name, email, hashedPassword],
+      "INSERT INTO users (name, email, password, role) VALUES (?, ?, ?, ?)",
+      [name, email, hashedPassword, "admin"],
     );
 
-    return NextResponse.json(
-      { message: "Registration successful" },
-      { status: 201 },
-    );
+    return NextResponse.json({ success: true });
   } catch (err) {
-    console.error(err);
+    console.error("ADMIN REGISTER ERROR:", err);
     return NextResponse.json({ message: "Server error" }, { status: 500 });
   }
 }

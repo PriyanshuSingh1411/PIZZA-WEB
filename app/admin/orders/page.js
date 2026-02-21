@@ -8,35 +8,44 @@ export default function AdminOrdersPage() {
   const [showModal, setShowModal] = useState(false);
   const [items, setItems] = useState([]);
   const [activeOrder, setActiveOrder] = useState(null);
-  const STEPS = ["Placed", "Preparing", "Out for Delivery", "Delivered"];
+
+  /* ================= LOAD ORDERS ================= */
+
+  const loadOrders = async () => {
+    try {
+      const res = await fetch("/api/admin/orders", {
+        credentials: "include",
+      });
+
+      if (!res.ok) throw new Error();
+
+      const data = await res.json();
+      setOrders(data);
+      setLoading(false);
+    } catch (err) {
+      alert("Not authorized");
+      window.location.href = "/auth/admin/login";
+    }
+  };
 
   useEffect(() => {
-    fetch("/api/admin/orders")
-      .then((res) => {
-        if (!res.ok) throw new Error();
-        return res.json();
-      })
-      .then((data) => {
-        setOrders(data);
-        setLoading(false);
-      })
-      .catch(() => {
-        alert("Not authorized");
-        window.location.href = "/menu";
-      });
+    loadOrders();
   }, []);
+
+  /* ================= CHANGE STATUS ================= */
 
   const changeStatus = async (id, status) => {
     await fetch("/api/admin/orders", {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
+      credentials: "include",
       body: JSON.stringify({ id, status }),
     });
 
-    const res = await fetch("/api/admin/orders");
-    const data = await res.json();
-    setOrders(data);
+    loadOrders();
   };
+
+  /* ================= VIEW DETAILS ================= */
 
   const viewDetails = async (orderId) => {
     setActiveOrder(orderId);
@@ -44,6 +53,7 @@ export default function AdminOrdersPage() {
     const res = await fetch("/api/admin/orders/items", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
+      credentials: "include",
       body: JSON.stringify({ orderId }),
     });
 
@@ -52,138 +62,234 @@ export default function AdminOrdersPage() {
     setShowModal(true);
   };
 
+  /* ================= DELETE ORDER ================= */
+
+  const handleDelete = async (id) => {
+    const confirmDelete = confirm(
+      "Are you sure you want to permanently delete this order?",
+    );
+
+    if (!confirmDelete) return;
+
+    try {
+      const res = await fetch(`/api/admin/orders/${id}`, {
+        method: "DELETE",
+        credentials: "include",
+      });
+
+      if (!res.ok) {
+        alert("Failed to delete order");
+        return;
+      }
+
+      // Remove instantly from UI
+      setOrders((prev) => prev.filter((order) => order.id !== id));
+
+      alert("Order deleted successfully");
+    } catch (err) {
+      console.error("DELETE ERROR:", err);
+      alert("Something went wrong");
+    }
+  };
+
+  /* ================= LOADING ================= */
+
   if (loading) {
     return <p style={{ padding: 40 }}>Loading orders...</p>;
   }
 
+  /* ================= UI ================= */
+
   return (
-    <div style={styles.page}>
-      <h1 style={styles.heading}>📦 Manage Orders</h1>
-      <p style={styles.subheading}>View, update, and track customer orders</p>
+    <div style={styles.wrapper}>
+      <div style={styles.container}>
+        <div style={styles.header}>
+          <h1 style={styles.title}>Order Management</h1>
+          <p style={styles.subtitle}>
+            View, update, track and manage customer orders
+          </p>
+        </div>
 
-      <div style={styles.grid}>
-        {orders.map((order) => (
-          <div key={order.id} style={styles.card}>
-            <div style={styles.row}>
-              <div>
-                <h3>Order #{order.id}</h3>
-                <p style={styles.total}>₹{order.total}</p>
-              </div>
-
-              <span style={statusBadge(order.status)}>{order.status}</span>
-            </div>
-
-            <div style={styles.actions}>
-              <select
-                value={order.status}
-                onChange={(e) => changeStatus(order.id, e.target.value)}
-                style={styles.select}
-              >
-                <option>Placed</option>
-                <option>Preparing</option>
-                <option>Out for Delivery</option>
-                <option>Delivered</option>
-              </select>
-
-              <button
-                style={styles.viewBtn}
-                onClick={() => viewDetails(order.id)}
-              >
-                View Details
-              </button>
-            </div>
+        {orders.length === 0 ? (
+          <div style={styles.emptyState}>
+            <p>No orders found.</p>
           </div>
-        ))}
+        ) : (
+          <div style={styles.grid}>
+            {orders.map((order) => (
+              <div key={order.id} style={styles.card}>
+                <div style={styles.cardHeader}>
+                  <div>
+                    <h3 style={styles.orderId}>Order #{order.id}</h3>
+                    <p style={styles.total}>₹{order.total}</p>
+                  </div>
+
+                  <span style={statusBadge(order.status)}>{order.status}</span>
+                </div>
+
+                <div style={styles.actions}>
+                  <select
+                    value={order.status}
+                    onChange={(e) => changeStatus(order.id, e.target.value)}
+                    style={styles.select}
+                  >
+                    <option>Placed</option>
+                    <option>Preparing</option>
+                    <option>Out for Delivery</option>
+                    <option>Delivered</option>
+                    <option>Cancelled</option>
+                  </select>
+
+                  <button
+                    style={styles.primaryBtn}
+                    onClick={() => viewDetails(order.id)}
+                  >
+                    View
+                  </button>
+
+                  <button
+                    onClick={() => handleDelete(order.id)}
+                    style={styles.dangerBtn}
+                  >
+                    Delete
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
-      {/* ================= MODAL ================= */}
       {showModal && (
         <div style={styles.overlay}>
           <div style={styles.modal}>
-            <h2>Order #{activeOrder}</h2>
+            <div style={styles.modalHeader}>
+              <h2>Order #{activeOrder}</h2>
+              <button
+                onClick={() => setShowModal(false)}
+                style={styles.closeIcon}
+              >
+                ✕
+              </button>
+            </div>
 
             {items.length === 0 ? (
-              <p>No items found.</p>
+              <p style={{ padding: "10px 0" }}>No items found.</p>
             ) : (
               items.map((item, i) => (
-                <div key={i} style={styles.item}>
-                  <strong>{item.name}</strong>
-                  <span>
-                    {item.quantity} × ₹{item.price}
+                <div key={i} style={styles.itemRow}>
+                  <div>
+                    <strong>{item.name}</strong>
+                    <p style={styles.itemMeta}>
+                      {item.quantity} × ₹{item.price}
+                    </p>
+                  </div>
+                  <span style={styles.itemTotal}>
+                    ₹{item.quantity * item.price}
                   </span>
                 </div>
               ))
             )}
-
-            <button style={styles.closeBtn} onClick={() => setShowModal(false)}>
-              Close
-            </button>
           </div>
         </div>
       )}
-      {/* ================= END MODAL ================= */}
     </div>
   );
 }
 
-/* ===============================
-   STYLES
-================================ */
+/* ================= STYLES ================= */
+
 const styles = {
-  page: {
-    background: "#f4f6f8",
+  wrapper: {
+    background: "#f9fafb",
     minHeight: "100vh",
+    padding: "40px 20px",
+  },
+
+  container: {
+    maxWidth: "1200px",
+    margin: "0 auto",
+  },
+
+  header: {
+    marginBottom: "40px",
+  },
+
+  title: {
+    fontSize: "28px",
+    fontWeight: "700",
+    marginBottom: "6px",
+  },
+
+  subtitle: {
+    color: "#6b7280",
+  },
+
+  emptyState: {
+    background: "#fff",
     padding: "40px",
-  },
-
-  heading: {
-    marginBottom: "5px",
-  },
-
-  subheading: {
-    color: "#666",
-    marginBottom: "30px",
+    borderRadius: "12px",
+    textAlign: "center",
+    boxShadow: "0 4px 12px rgba(0,0,0,0.05)",
   },
 
   grid: {
     display: "grid",
-    gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))",
-    gap: "20px",
+    gridTemplateColumns: "repeat(auto-fit, minmax(340px, 1fr))",
+    gap: "24px",
   },
 
   card: {
     background: "#fff",
-    borderRadius: "14px",
-    padding: "18px",
-    boxShadow: "0 8px 20px rgba(0,0,0,0.08)",
+    borderRadius: "16px",
+    padding: "20px",
+    boxShadow: "0 10px 25px rgba(0,0,0,0.05)",
+    transition: "0.2s ease",
   },
 
-  row: {
+  cardHeader: {
     display: "flex",
     justifyContent: "space-between",
     alignItems: "center",
+    marginBottom: "16px",
+  },
+
+  orderId: {
+    margin: 0,
+    fontSize: "18px",
   },
 
   total: {
-    color: "#555",
+    color: "#6b7280",
+    marginTop: "4px",
   },
 
   actions: {
     display: "flex",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginTop: "15px",
+    gap: "10px",
+    flexWrap: "wrap",
   },
 
   select: {
-    padding: "8px",
+    padding: "8px 10px",
     borderRadius: "8px",
-    border: "1px solid #ddd",
-    cursor: "pointer",
+    border: "1px solid #d1d5db",
+    background: "#f9fafb",
+    fontSize: "14px",
   },
 
-  viewBtn: {
-    background: "#ff4d4f",
+  primaryBtn: {
+    background: "#111827",
+    color: "#fff",
+    border: "none",
+    padding: "8px 14px",
+    borderRadius: "8px",
+    cursor: "pointer",
+    fontWeight: "600",
+  },
+
+  dangerBtn: {
+    background: "#dc2626",
     color: "#fff",
     border: "none",
     padding: "8px 14px",
@@ -204,28 +310,43 @@ const styles = {
 
   modal: {
     background: "#fff",
-    borderRadius: "14px",
-    padding: "20px",
-    width: "420px",
+    borderRadius: "16px",
+    padding: "24px",
+    width: "480px",
     maxHeight: "80vh",
     overflowY: "auto",
   },
 
-  item: {
+  modalHeader: {
     display: "flex",
     justifyContent: "space-between",
-    borderBottom: "1px solid #eee",
-    padding: "10px 0",
+    alignItems: "center",
+    marginBottom: "20px",
   },
 
-  closeBtn: {
-    marginTop: "15px",
-    background: "#333",
-    color: "#fff",
+  closeIcon: {
+    background: "transparent",
     border: "none",
-    padding: "8px 14px",
-    borderRadius: "8px",
+    fontSize: "18px",
     cursor: "pointer",
+  },
+
+  itemRow: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    padding: "12px 0",
+    borderBottom: "1px solid #eee",
+  },
+
+  itemMeta: {
+    fontSize: "13px",
+    color: "#6b7280",
+    marginTop: "4px",
+  },
+
+  itemTotal: {
+    fontWeight: "600",
   },
 };
 
@@ -238,16 +359,16 @@ const statusBadge = (status) => ({
     status === "Delivered"
       ? "#d4edda"
       : status === "Out for Delivery"
-      ? "#cce5ff"
-      : status === "Preparing"
-      ? "#fff3cd"
-      : "#f8d7da",
+        ? "#cce5ff"
+        : status === "Preparing"
+          ? "#fff3cd"
+          : "#f8d7da",
   color:
     status === "Delivered"
       ? "#155724"
       : status === "Out for Delivery"
-      ? "#004085"
-      : status === "Preparing"
-      ? "#856404"
-      : "#721c24",
+        ? "#004085"
+        : status === "Preparing"
+          ? "#856404"
+          : "#721c24",
 });

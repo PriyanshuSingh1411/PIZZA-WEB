@@ -1,125 +1,297 @@
 "use client";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 
-export default function AdminPage() {
+export default function AdminHome() {
+  const [data, setData] = useState(null);
+  const [active, setActive] = useState(null);
+  const [loading, setLoading] = useState(true);
+
   useEffect(() => {
-    fetch("/api/admin/check").then((res) => {
-      if (!res.ok) {
-        window.location.href = "/menu";
-      }
-    });
+    fetch("/api/admin/dashboard", { credentials: "include" })
+      .then((res) => res.json())
+      .then((res) => {
+        if (res.message) {
+          console.error("Dashboard error:", res.message);
+          setData({
+            summary: {
+              totalUsers: 0,
+              totalOrders: 0,
+              totalProducts: 0,
+              totalRevenue: 0,
+            },
+            details: { users: [], orders: [], products: [], revenue: [] },
+          });
+        } else {
+          setData(res);
+        }
+        setLoading(false);
+      })
+      .catch((err) => {
+        console.error("Dashboard fetch error:", err);
+        setData({
+          summary: {
+            totalUsers: 0,
+            totalOrders: 0,
+            totalProducts: 0,
+            totalRevenue: 0,
+          },
+          details: { users: [], orders: [], products: [], revenue: [] },
+        });
+        setLoading(false);
+      });
   }, []);
 
+  if (loading)
+    return (
+      <div style={center}>
+        <div style={loader}></div>
+      </div>
+    );
+
+  if (!data || !data.summary) {
+    return (
+      <div style={center}>
+        <p>Unable to load dashboard data.</p>
+      </div>
+    );
+  }
+
+  const { summary, details } = data;
+
   return (
-    <div style={styles.page}>
-      {/* HEADER */}
-      <div style={styles.header}>
-        <h1>Admin Dashboard</h1>
-        <p>Welcome back! Manage your pizza business 🍕</p>
+    <div style={container}>
+      <div style={header}>
+        <h1 style={title}>Dashboard Overview</h1>
+        <p style={subtitle}>Monitor your platform performance</p>
       </div>
 
-      {/* STATS */}
-      <div style={styles.stats}>
-        <div style={styles.statCard}>
-          <h2>📦</h2>
-          <p style={styles.statValue}>128</p>
-          <span>Total Orders</span>
-        </div>
-
-        <div style={styles.statCard}>
-          <h2>💰</h2>
-          <p style={styles.statValue}>₹24,560</p>
-          <span>Total Revenue</span>
-        </div>
-
-        <div style={styles.statCard}>
-          <h2>🍕</h2>
-          <p style={styles.statValue}>18</p>
-          <span>Products</span>
-        </div>
+      {/* SUMMARY CARDS */}
+      <div style={grid}>
+        <Card
+          icon="👤"
+          title="Users"
+          value={summary.totalUsers}
+          active={active === "users"}
+          onClick={() => setActive("users")}
+        />
+        <Card
+          icon="📦"
+          title="Orders"
+          value={summary.totalOrders}
+          active={active === "orders"}
+          onClick={() => setActive("orders")}
+        />
+        <Card
+          icon="🍕"
+          title="Products"
+          value={summary.totalProducts}
+          active={active === "products"}
+          onClick={() => setActive("products")}
+        />
+        <Card
+          icon="💰"
+          title="Revenue"
+          value={`₹${summary.totalRevenue}`}
+          active={active === "revenue"}
+          onClick={() => setActive("revenue")}
+        />
       </div>
 
-      {/* QUICK ACTIONS */}
-      <div style={styles.section}>
-        <h3>Quick Actions</h3>
+      {/* DETAILS */}
+      <div style={{ marginTop: 30 }}>
+        {active === "users" && (
+          <Table
+            title="👤 Users List"
+            headers={["ID", "Name", "Email"]}
+            rows={details.users.map((u) => [u.id, u.name, u.email])}
+          />
+        )}
 
-        <div style={styles.actions}>
-          <a href="/admin/orders" style={styles.actionCard}>
-            📦 Manage Orders
-          </a>
+        {active === "orders" && (
+          <Table
+            title="📦 Orders List"
+            headers={["ID", "User ID", "Total", "Status", "Date"]}
+            rows={details.orders.map((o) => [
+              o.id,
+              o.user_id,
+              `₹${o.total}`,
+              o.status,
+              new Date(o.created_at).toLocaleString(),
+            ])}
+          />
+        )}
 
-          <a href="/admin/products" style={styles.actionCard}>
-            🍕 Manage Products
-          </a>
+        {active === "products" && (
+          <Table
+            title="🍕 Products List"
+            headers={["ID", "Name", "Price"]}
+            rows={details.products.map((p) => [p.id, p.name, `₹${p.price}`])}
+          />
+        )}
 
-          <a href="/admin/coupons" style={styles.actionCard}>
-            🎟️ Manage Coupons
-          </a>
-        </div>
+        {active === "revenue" && (
+          <Table
+            title="💰 Revenue Records"
+            headers={["Order ID", "Amount"]}
+            rows={details.revenue.map((r) => [r.id, `₹${r.total}`])}
+          />
+        )}
+
+        {!active && (
+          <div style={emptyState}>
+            Click on a card above to view detailed data.
+          </div>
+        )}
       </div>
     </div>
   );
 }
 
-/* ===============================
-   STYLES
-================================ */
-const styles = {
-  page: {
-    background: "#f4f6f8",
-    minHeight: "100vh",
-    padding: "40px",
-  },
+/* ================= COMPONENTS ================= */
 
-  header: {
-    marginBottom: "30px",
-  },
+function Card({ icon, title, value, onClick, active }) {
+  return (
+    <div
+      onClick={onClick}
+      style={{
+        ...card,
+        border: active ? "2px solid #2563eb" : "1px solid #e5e7eb",
+        background: active ? "#eff6ff" : "#fff",
+      }}
+    >
+      <div style={cardTop}>
+        <span style={iconStyle}>{icon}</span>
+        <span style={cardTitle}>{title}</span>
+      </div>
+      <p style={cardValue}>{value}</p>
+    </div>
+  );
+}
 
-  stats: {
-    display: "grid",
-    gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
-    gap: "20px",
-    marginBottom: "40px",
-  },
+function Table({ title, headers, rows }) {
+  return (
+    <div style={tableWrapper}>
+      <h3 style={tableTitle}>{title}</h3>
 
-  statCard: {
-    background: "#fff",
-    borderRadius: "14px",
-    padding: "25px",
-    boxShadow: "0 8px 20px rgba(0,0,0,0.08)",
-    textAlign: "center",
-  },
+      {rows.length === 0 ? (
+        <div style={emptyState}>No records found.</div>
+      ) : (
+        <table style={table}>
+          <thead>
+            <tr>
+              {headers.map((h, i) => (
+                <th key={i} style={th}>
+                  {h}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((row, i) => (
+              <tr key={i}>
+                {row.map((cell, j) => (
+                  <td key={j} style={td}>
+                    {cell}
+                  </td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+    </div>
+  );
+}
 
-  statValue: {
-    fontSize: "28px",
-    fontWeight: "bold",
-    margin: "10px 0",
-  },
+/* ================= STYLES ================= */
 
-  section: {
-    background: "#fff",
-    borderRadius: "14px",
-    padding: "25px",
-    boxShadow: "0 8px 20px rgba(0,0,0,0.08)",
-  },
+const container = { padding: "40px" };
 
-  actions: {
-    display: "grid",
-    gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
-    gap: "15px",
-    marginTop: "20px",
-  },
+const header = { marginBottom: "30px" };
 
-  actionCard: {
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    padding: "20px",
-    borderRadius: "12px",
-    background: "#ff4d4f",
-    color: "#fff",
-    textDecoration: "none",
-    fontWeight: "600",
-    cursor: "pointer",
-  },
+const title = { fontSize: "26px", fontWeight: "700" };
+
+const subtitle = { color: "#6b7280", fontSize: "14px" };
+
+const grid = {
+  display: "grid",
+  gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+  gap: "20px",
+};
+
+const card = {
+  padding: "20px",
+  borderRadius: "14px",
+  cursor: "pointer",
+  boxShadow: "0 6px 20px rgba(0,0,0,0.05)",
+  transition: "0.2s ease",
+};
+
+const cardTop = {
+  display: "flex",
+  alignItems: "center",
+  gap: "10px",
+  marginBottom: "15px",
+};
+
+const iconStyle = {
+  fontSize: "22px",
+};
+
+const cardTitle = {
+  fontSize: "14px",
+  color: "#6b7280",
+};
+
+const cardValue = {
+  fontSize: "26px",
+  fontWeight: "700",
+};
+
+const tableWrapper = {
+  background: "#fff",
+  borderRadius: "12px",
+  padding: "20px",
+  boxShadow: "0 6px 20px rgba(0,0,0,0.05)",
+};
+
+const tableTitle = { marginBottom: "15px", fontWeight: "600" };
+
+const table = {
+  width: "100%",
+  borderCollapse: "collapse",
+};
+
+const th = {
+  textAlign: "left",
+  padding: "12px",
+  background: "#f3f4f6",
+  fontSize: "14px",
+};
+
+const td = {
+  padding: "12px",
+  borderTop: "1px solid #e5e7eb",
+  fontSize: "14px",
+};
+
+const emptyState = {
+  padding: "20px",
+  textAlign: "center",
+  color: "#6b7280",
+};
+
+const center = {
+  height: "100vh",
+  display: "flex",
+  justifyContent: "center",
+  alignItems: "center",
+};
+
+const loader = {
+  width: "40px",
+  height: "40px",
+  border: "4px solid #e5e7eb",
+  borderTop: "4px solid #2563eb",
+  borderRadius: "50%",
 };

@@ -1,6 +1,28 @@
-"use client";
+import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
+import jwt from "jsonwebtoken";
 
-export default function AdminLayout({ children }) {
+/* ===============================
+   ADMIN LAYOUT (SERVER PROTECTED)
+================================ */
+export default async function AdminLayout({ children }) {
+  const cookieStore = await cookies(); // ✅ Next 16 requires await
+  const token = cookieStore.get("token")?.value;
+
+  // if (!token) {
+  //   redirect("/admin/login");
+  // }
+
+  try {
+    const user = jwt.verify(token, process.env.JWT_SECRET);
+
+    if (user.role !== "admin") {
+      redirect("/");
+    }
+  } catch (err) {
+    // redirect("/admin/login");
+  }
+
   return (
     <div style={styles.wrapper}>
       {/* SIDEBAR */}
@@ -22,7 +44,12 @@ export default function AdminLayout({ children }) {
           <a href="/admin/coupons" style={styles.link}>
             🎟️ Coupons
           </a>
+          <a href="/admin/logout" style={{ textDecoration: "none" }}>
+            <button style={styles.logoutBtn}>🚪 Logout</button>
+          </a>
         </nav>
+
+        {/* LOGOUT FORM */}
 
         <div style={styles.footer}>
           <small>© 2026 Pizza App</small>
@@ -38,6 +65,7 @@ export default function AdminLayout({ children }) {
 /* ===============================
    STYLES
 ================================ */
+
 const styles = {
   wrapper: {
     display: "flex",
@@ -79,7 +107,6 @@ const styles = {
     color: "#e5e7eb",
     textDecoration: "none",
     fontWeight: "500",
-    transition: "all 0.2s ease",
     background: "transparent",
   },
 
@@ -87,6 +114,17 @@ const styles = {
     flex: 1,
     padding: "30px",
     background: "#f9fafb",
+  },
+
+  logoutBtn: {
+    marginTop: "20px",
+    padding: "10px",
+    borderRadius: "8px",
+    border: "none",
+    background: "#ef4444",
+    color: "#fff",
+    cursor: "pointer",
+    fontWeight: "600",
   },
 
   footer: {

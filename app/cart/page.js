@@ -20,9 +20,11 @@ export default function CartPage() {
 
   if (cart.length === 0) {
     return (
-      <div style={styles.empty}>
-        <h1>🛒 Your cart is empty</h1>
-        <p>Add some delicious pizzas to continue 🍕</p>
+      <div style={{ ...styles.page, background: "#ffffff" }}>
+        <div style={styles.empty}>
+          <h1>🛒 Your cart is empty</h1>
+          <p>Add some delicious pizzas to continue 🍕</p>
+        </div>
       </div>
     );
   }

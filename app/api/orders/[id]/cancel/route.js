@@ -1,13 +1,15 @@
 import { NextResponse } from "next/server";
 import db from "@/lib/db";
 import jwt from "jsonwebtoken";
+import { cookies } from "next/headers";
 
-export async function PUT(req, context) {
+export async function PUT(req, { params }) {
   try {
-    const { params } = context; // ✅ unwrap context
-    const orderId = params.id; // ✅ now safe
+    const orderId = params.id;
 
-    const token = req.cookies.get("token")?.value;
+    const cookieStore = await cookies();
+    const token = cookieStore.get("token")?.value;
+
     if (!token) {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
     }
@@ -24,7 +26,11 @@ export async function PUT(req, context) {
       return NextResponse.json({ message: "Order not found" }, { status: 404 });
     }
 
-    if (["Delivered", "Out for Delivery"].includes(rows[0].status)) {
+    const currentStatus = rows[0].status;
+
+    if (
+      ["Delivered", "Out for Delivery", "Cancelled"].includes(currentStatus)
+    ) {
       return NextResponse.json(
         { message: "Order cannot be cancelled now" },
         { status: 400 },
@@ -32,8 +38,8 @@ export async function PUT(req, context) {
     }
 
     await db.query(
-      "UPDATE orders SET status = 'Cancelled' WHERE id = ? AND user_id = ?",
-      [orderId, userId],
+      "UPDATE orders SET status = ? WHERE id = ? AND user_id = ?",
+      ["Cancelled", orderId, userId],
     );
 
     return NextResponse.json({ success: true });

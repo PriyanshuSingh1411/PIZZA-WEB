@@ -1,11 +1,12 @@
 import db from "@/lib/db";
-
 import jwt from "jsonwebtoken";
 import { NextResponse } from "next/server";
+import { cookies } from "next/headers";
 
 export async function GET(req) {
   try {
-    const token = req.cookies.get("token")?.value;
+    const cookieStore = await cookies();
+    const token = cookieStore.get("token")?.value;
 
     if (!token) {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
@@ -15,7 +16,7 @@ export async function GET(req) {
 
     const [orders] = await db.query(
       "SELECT * FROM orders WHERE user_id = ? ORDER BY created_at DESC",
-      [user.userId]
+      [user.userId],
     );
 
     console.log(orders);
@@ -24,7 +25,7 @@ export async function GET(req) {
     console.error(err);
     return NextResponse.json(
       { message: "Failed to fetch orders" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

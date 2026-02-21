@@ -12,7 +12,7 @@ export default function AdminCouponsPage() {
   });
 
   const loadCoupons = () => {
-    fetch("/api/admin/coupons")
+    fetch("/api/admin/coupons", { credentials: "include" })
       .then((res) => res.json())
       .then((data) => setCoupons(data));
   };
@@ -31,6 +31,7 @@ export default function AdminCouponsPage() {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(form),
+      credentials: "include",
     });
 
     setForm({
@@ -52,6 +53,7 @@ export default function AdminCouponsPage() {
         id,
         status: status === "active" ? "inactive" : "active",
       }),
+      credentials: "include",
     });
 
     loadCoupons();
@@ -64,6 +66,7 @@ export default function AdminCouponsPage() {
       method: "DELETE",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ id }),
+      credentials: "include",
     });
 
     loadCoupons();
