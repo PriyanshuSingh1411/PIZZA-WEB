@@ -12,6 +12,7 @@ export default function RootLayout({ children }) {
   const hideNavbar =
     pathname === "/" ||
     pathname.startsWith("/admin") ||
+    pathname.startsWith("/auth/admin") ||
     pathname.startsWith("/auth/login") ||
     pathname.startsWith("/auth/register");
 
@@ -25,7 +26,7 @@ export default function RootLayout({ children }) {
 
         {!hideNavbar && <Navbar />}
         {children}
-        <Chatbot />
+        {!hideNavbar && <Chatbot />}
       </body>
     </html>
   );

@@ -36,8 +36,8 @@ export default function CartPage() {
       <div style={styles.container}>
         {/* CART ITEMS */}
         <div style={styles.items}>
-          {cart.map((item) => (
-            <div key={item.id} style={styles.card}>
+          {cart.map((item, index) => (
+            <div key={item.customKey || item.id || index} style={styles.card}>
               <img
                 src={
                   item.image
@@ -54,13 +54,36 @@ export default function CartPage() {
 
               <div style={styles.info}>
                 <h3>{item.name}</h3>
+
+                {/* Show customization details if available */}
+                {(item.size || item.toppings) && (
+                  <div style={styles.customizations}>
+                    {item.size && (
+                      <p style={styles.customText}>
+                        📏 Size: {item.size.name} ({item.size.label})
+                      </p>
+                    )}
+                    {item.toppings && item.toppings.length > 0 && (
+                      <p style={styles.customText}>
+                        🍕 Toppings:{" "}
+                        {item.toppings.map((t) => t.name).join(", ")}
+                      </p>
+                    )}
+                    {item.specialInstructions && (
+                      <p style={styles.specialText}>
+                        📝 Note: {item.specialInstructions}
+                      </p>
+                    )}
+                  </div>
+                )}
+
                 <p style={styles.price}>₹{item.price}</p>
 
                 <div style={styles.qtyRow}>
                   <button
                     style={styles.qtyBtn}
                     onClick={() => {
-                      updateQty(item.id, item.qty - 1);
+                      updateQty(item.customKey || item.id, item.qty - 1);
                       refresh();
                     }}
                   >
@@ -72,7 +95,7 @@ export default function CartPage() {
                   <button
                     style={styles.qtyBtn}
                     onClick={() => {
-                      updateQty(item.id, item.qty + 1);
+                      updateQty(item.customKey || item.id, item.qty + 1);
                       refresh();
                     }}
                   >
@@ -84,7 +107,7 @@ export default function CartPage() {
               <button
                 style={styles.remove}
                 onClick={() => {
-                  removeItem(item.id);
+                  removeItem(item.customKey || item.id);
                   refresh();
                 }}
               >
@@ -239,5 +262,22 @@ const styles = {
   empty: {
     textAlign: "center",
     marginTop: "80px",
+  },
+
+  customizations: {
+    marginBottom: "8px",
+  },
+
+  customText: {
+    fontSize: "12px",
+    color: "#666",
+    margin: "2px 0",
+  },
+
+  specialText: {
+    fontSize: "11px",
+    color: "#888",
+    fontStyle: "italic",
+    margin: "4px 0",
   },
 };

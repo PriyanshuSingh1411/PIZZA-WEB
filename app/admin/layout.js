@@ -1,4 +1,4 @@
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 import jwt from "jsonwebtoken";
 
@@ -6,7 +6,10 @@ import jwt from "jsonwebtoken";
    ADMIN LAYOUT (SERVER PROTECTED)
 ================================ */
 export default async function AdminLayout({ children }) {
-  const cookieStore = await cookies(); // ✅ Next 16 requires await
+  const cookieStore = await cookies();
+  const headersList = await headers();
+  const pathname = headersList.get("x-next-url") || "";
+
   const token = cookieStore.get("token")?.value;
 
   // if (!token) {
@@ -23,41 +26,49 @@ export default async function AdminLayout({ children }) {
     // redirect("/admin/login");
   }
 
+  // Check if we're on the register or login page - no sidebar for auth pages
+  const isAuthPage =
+    pathname.includes("/register") || pathname.includes("/login");
+
   return (
-    <div style={styles.wrapper}>
-      {/* SIDEBAR */}
-      <aside style={styles.sidebar}>
-        <div style={styles.logo}>
-          🍕 <span>Pizza Admin</span>
-        </div>
+    <div style={isAuthPage ? styles.fullPage : styles.wrapper}>
+      {/* SIDEBAR - Only show if not on auth pages */}
+      {!isAuthPage && (
+        <aside style={styles.sidebar}>
+          <div style={styles.logo}>
+            🍕 <span>Pizza Admin</span>
+          </div>
 
-        <nav style={styles.nav}>
-          <a href="/admin" style={styles.link}>
-            📊 Dashboard
-          </a>
-          <a href="/admin/products" style={styles.link}>
-            🍕 Products
-          </a>
-          <a href="/admin/orders" style={styles.link}>
-            📦 Orders
-          </a>
-          <a href="/admin/coupons" style={styles.link}>
-            🎟️ Coupons
-          </a>
-          <a href="/admin/logout" style={{ textDecoration: "none" }}>
-            <button style={styles.logoutBtn}>🚪 Logout</button>
-          </a>
-        </nav>
+          <nav style={styles.nav}>
+            <a href="/admin" style={styles.link}>
+              📊 Dashboard
+            </a>
+            <a href="/admin/products" style={styles.link}>
+              🍕 Products
+            </a>
+            <a href="/admin/orders" style={styles.link}>
+              📦 Orders
+            </a>
+            <a href="/admin/coupons" style={styles.link}>
+              🎟️ Coupons
+            </a>
+            <a href="/admin/logout" style={{ textDecoration: "none" }}>
+              <button style={styles.logoutBtn}>🚪 Logout</button>
+            </a>
+          </nav>
 
-        {/* LOGOUT FORM */}
+          {/* LOGOUT FORM */}
 
-        <div style={styles.footer}>
-          <small>© 2026 Pizza App</small>
-        </div>
-      </aside>
+          <div style={styles.footer}>
+            <small>© 2026 Pizza App</small>
+          </div>
+        </aside>
+      )}
 
       {/* CONTENT */}
-      <main style={styles.content}>{children}</main>
+      <main style={isAuthPage ? styles.fullContent : styles.content}>
+        {children}
+      </main>
     </div>
   );
 }
@@ -72,6 +83,18 @@ const styles = {
     minHeight: "100vh",
     background: "#f3f4f6",
     color: "#111827",
+  },
+
+  fullPage: {
+    minHeight: "100vh",
+    background: "#f3f4f6",
+    color: "#111827",
+  },
+
+  fullContent: {
+    width: "100%",
+    padding: "30px",
+    background: "#f9fafb",
   },
 
   sidebar: {

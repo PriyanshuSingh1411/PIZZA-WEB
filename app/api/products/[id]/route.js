@@ -3,7 +3,7 @@ import db from "@/lib/db";
 
 /* GET single product */
 export async function GET(req, { params }) {
-  const { id } = params;
+  const { id } = await params;
 
   const [rows] = await db.query("SELECT * FROM products WHERE id = ?", [id]);
 
@@ -22,7 +22,7 @@ export async function GET(req, { params }) {
 
 /* UPDATE product */
 export async function PUT(req, { params }) {
-  const { id } = params;
+  const { id } = await params;
   const body = await req.json();
 
   const { name, description, price, category, image } = body;
