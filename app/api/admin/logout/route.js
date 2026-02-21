@@ -4,7 +4,7 @@ export async function POST() {
   try {
     const response = NextResponse.json({ success: true });
 
-    response.cookies.set("token", "", {
+    response.cookies.set("admin_token", "", {
       httpOnly: true,
       expires: new Date(0), // expire immediately
       path: "/",

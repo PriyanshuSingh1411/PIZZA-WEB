@@ -10,7 +10,7 @@ export default async function AdminLayout({ children }) {
   const headersList = await headers();
   const pathname = headersList.get("x-next-url") || "";
 
-  const token = cookieStore.get("token")?.value;
+  const token = cookieStore.get("admin_token")?.value;
 
   // if (!token) {
   //   redirect("/admin/login");

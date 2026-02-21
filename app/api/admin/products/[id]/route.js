@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import db from "@/lib/db";
 import fs from "fs/promises";
 import path from "path";
+import jwt from "jsonwebtoken";
+import { cookies } from "next/headers";
 
 /* ===============================
    GET SINGLE PRODUCT
@@ -15,7 +17,7 @@ export async function GET(req, context) {
     if (!rows.length) {
       return NextResponse.json(
         { success: false, error: "Product not found" },
-        { status: 404 }
+        { status: 404 },
       );
     }
 
@@ -27,7 +29,7 @@ export async function GET(req, context) {
     console.error("GET PRODUCT ERROR:", error);
     return NextResponse.json(
       { success: false, error: "Server error" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
@@ -37,6 +39,18 @@ export async function GET(req, context) {
 ================================ */
 export async function PUT(req, context) {
   try {
+    const cookieStore = await cookies();
+    const token = cookieStore.get("admin_token")?.value;
+
+    if (!token) {
+      return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+    }
+
+    const user = jwt.verify(token, process.env.JWT_SECRET);
+    if (user.role !== "admin") {
+      return NextResponse.json({ message: "Forbidden" }, { status: 403 });
+    }
+
     const { id } = await context.params;
     const formData = await req.formData();
 
@@ -49,7 +63,7 @@ export async function PUT(req, context) {
     if (!name || !price) {
       return NextResponse.json(
         { success: false, error: "Name and price required" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -75,14 +89,14 @@ export async function PUT(req, context) {
         `UPDATE products
          SET name=?, description=?, price=?, category=?, image=?
          WHERE id=?`,
-        [name, description, price, category, imageUrl, id]
+        [name, description, price, category, imageUrl, id],
       );
     } else {
       await db.query(
         `UPDATE products
          SET name=?, description=?, price=?, category=?
          WHERE id=?`,
-        [name, description, price, category, id]
+        [name, description, price, category, id],
       );
     }
 
@@ -91,7 +105,7 @@ export async function PUT(req, context) {
     console.error("UPDATE PRODUCT ERROR:", error);
     return NextResponse.json(
       { success: false, error: "Server error" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
@@ -101,6 +115,18 @@ export async function PUT(req, context) {
 ================================ */
 export async function DELETE(req, context) {
   try {
+    const cookieStore = await cookies();
+    const token = cookieStore.get("admin_token")?.value;
+
+    if (!token) {
+      return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+    }
+
+    const user = jwt.verify(token, process.env.JWT_SECRET);
+    if (user.role !== "admin") {
+      return NextResponse.json({ message: "Forbidden" }, { status: 403 });
+    }
+
     const { id } = await context.params;
 
     const [result] = await db.query("DELETE FROM products WHERE id = ?", [id]);
@@ -108,7 +134,7 @@ export async function DELETE(req, context) {
     if (result.affectedRows === 0) {
       return NextResponse.json(
         { success: false, error: "Product not found" },
-        { status: 404 }
+        { status: 404 },
       );
     }
 
@@ -117,7 +143,7 @@ export async function DELETE(req, context) {
     console.error("DELETE PRODUCT ERROR:", error);
     return NextResponse.json(
       { success: false, error: "Server error" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

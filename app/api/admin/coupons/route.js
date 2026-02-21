@@ -6,7 +6,7 @@ import { cookies } from "next/headers";
 
 async function isAdmin() {
   const cookieStore = await cookies();
-  const token = cookieStore.get("token")?.value;
+  const token = cookieStore.get("admin_token")?.value;
   if (!token) return false;
   const user = jwt.verify(token, process.env.JWT_SECRET);
   return user.role === "admin";
